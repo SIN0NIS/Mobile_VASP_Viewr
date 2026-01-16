@@ -3,168 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VASP Mobile Pro (Fixed)</title>
+    <title>VASP Mobile Pro v3</title>
     <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; }
+        body { margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; background: #fff; }
         
-        /* 상단 정보바 */
-        #info-bar {
-            position: absolute; top: 0; left: 0; width: 100%;
-            background: rgba(255,255,255,0.95); padding: 10px 50px 10px 15px; 
-            box-sizing: border-box; border-bottom: 1px solid #ddd; z-index: 5;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); pointer-events: none;
+        /* 1. 상단 정보 & 범례 영역 (좌측 상단 고정) */
+        #top-left-panel {
+            position: absolute; top: 10px; left: 10px; z-index: 10;
+            pointer-events: none; /* 클릭 통과 */
+            display: flex; flex-direction: column; gap: 5px;
         }
-        #file-name { font-weight: bold; font-size: 14px; display: block; }
-        #atom-info { font-size: 12px; color: #666; margin-top: 2px; }
 
-        /* 메뉴 버튼 */
+        #file-info {
+            background: rgba(255,255,255,0.9); padding: 5px 10px;
+            border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-size: 13px; font-weight: bold; border: 1px solid #ddd;
+            pointer-events: auto;
+        }
+
+        #legend {
+            background: rgba(255,255,255,0.85); padding: 8px;
+            border-radius: 4px; border: 1px solid #ccc;
+            font-size: 12px; pointer-events: auto;
+            display: none; /* 파일 로드 시 표시 */
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+        .atom-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.2); }
+
+        /* 2. 메뉴 버튼 (우측 상단) */
         #menu-btn {
-            position: absolute; top: 8px; right: 8px; z-index: 20;
-            width: 40px; height: 40px; border: none; background: white;
-            border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; pointer-events: auto;
+            position: absolute; top: 10px; right: 10px; z-index: 20;
+            width: 44px; height: 44px; border: none; background: white;
+            border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
 
-        /* 설정 사이드바 */
+        /* 3. 설정 사이드바 */
         #sidebar {
             position: absolute; top: 0; right: -320px; width: 300px; height: 100%;
             background: rgba(255,255,255,0.98); z-index: 15;
             transition: right 0.3s ease; box-shadow: -2px 0 10px rgba(0,0,0,0.1);
             display: flex; flex-direction: column;
-            pointer-events: auto;
         }
         #sidebar.open { right: 0; }
         
-        .sidebar-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; font-size: 16px; }
         .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
         
-        /* 컨트롤 UI */
+        /* UI 컨트롤 스타일 */
         .control-group { margin-bottom: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; }
-        .group-title { font-size: 12px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 10px; }
+        .group-title { font-size: 12px; font-weight: bold; color: #555; text-transform: uppercase; margin-bottom: 10px; border-left: 3px solid #007bff; padding-left: 6px; }
         
-        .row { display: flex; align-items: center; margin-bottom: 8px; justify-content: space-between; }
-        .btn-row { display: flex; gap: 5px; margin-bottom: 5px;}
+        .row { display: flex; align-items: center; margin-bottom: 10px; justify-content: space-between; font-size: 13px; }
+        .btn-row { display: flex; gap: 5px; margin-bottom: 8px; }
         
         button {
-            background: #f0f0f0; border: 1px solid #ccc; padding: 8px 10px;
-            border-radius: 4px; font-size: 12px; cursor: pointer; flex: 1;
+            background: #f1f3f5; border: 1px solid #ced4da; padding: 10px;
+            border-radius: 6px; font-size: 13px; cursor: pointer; flex: 1; font-weight: 500;
         }
-        button:active { background: #e0e0e0; }
+        button:active { background: #e9ecef; transform: translateY(1px); }
         
         input[type="range"] { flex: 1; margin: 0 10px; }
-        input[type="number"] { width: 50px; padding: 4px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; }
-        select { width: 60%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; }
-        input[type="checkbox"] { transform: scale(1.2); }
+        input[type="number"] { width: 50px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
+        select { width: 120px; padding: 6px; border-radius: 4px; border: 1px solid #ccc; }
+        input[type="checkbox"] { transform: scale(1.3); margin-right: 5px; }
 
-        /* 파일 업로드 버튼 */
-        .upload-wrapper { position: relative; margin-bottom: 15px; }
-        input[type="file"] { 
-            width: 100%; padding: 10px; background: #f8f9fa; 
-            border: 2px dashed #ccc; border-radius: 5px; 
+        /* 파일 업로드 디자인 */
+        .upload-box {
+            border: 2px dashed #007bff; background: #e7f1ff; padding: 15px;
+            text-align: center; border-radius: 8px; margin-bottom: 20px; cursor: pointer;
         }
-
-        /* 범례 */
-        #legend {
-            position: absolute; top: 60px; right: 10px; 
-            background: rgba(255,255,255,0.85); padding: 8px;
-            border-radius: 5px; font-size: 11px; z-index: 4; display: none;
-            pointer-events: none; border: 1px solid #ccc;
-        }
+        input[type="file"] { display: none; }
 
         #container { width: 100vw; height: 100vh; position: relative; }
     </style>
 </head>
 <body>
 
-    <div id="info-bar">
-        <span id="file-name">VASP Mobile Pro</span>
-        <div id="atom-info">Select a POSCAR file to start</div>
+    <div id="top-left-panel">
+        <div id="file-info">No File Loaded</div>
+        <div id="legend"></div>
     </div>
 
-    <div id="legend"></div>
-
-    <button id="menu-btn" onclick="toggleSidebar()">☰</button>
+    <button id="menu-btn" onclick="toggleSidebar()">⚙️</button>
 
     <div id="sidebar">
         <div class="sidebar-header">
             Settings
-            <button onclick="toggleSidebar()" style="width:auto; flex:0; border:none; background:none; font-size:18px;">✕</button>
+            <button onclick="toggleSidebar()" style="flex:0; width:auto; border:none; background:none; font-size:20px;">✕</button>
         </div>
         <div class="sidebar-content">
             
-            <div class="upload-wrapper">
-                <div class="group-title">1. File Load</div>
+            <label class="upload-box">
+                <div>📂 Click to Open File</div>
+                <div style="font-size:11px; color:#666; margin-top:5px;">(POSCAR, vasp, xyz)</div>
                 <input type="file" id="fileInput">
-            </div>
+            </label>
 
             <div class="control-group">
-                <div class="group-title">2. View & Axis</div>
+                <div class="group-title">Camera View</div>
                 <div class="btn-row">
-                    <button onclick="setView('a')">A (100)</button>
-                    <button onclick="setView('b')">B (010)</button>
-                    <button onclick="setView('c')">C (001)</button>
+                    <button onclick="setCameraView('a')">A (100)</button>
+                    <button onclick="setCameraView('b')">B (010)</button>
+                    <button onclick="setCameraView('c')">C (001)</button>
                 </div>
-                <div class="btn-row">
-                    <button onclick="viewer.zoomTo()">Fit Center</button>
-                </div>
+                <button onclick="viewer.zoomTo()" style="width:100%; background:#fff; border:1px dashed #999;">Fit to Screen</button>
             </div>
 
             <div class="control-group">
-                <div class="group-title">3. Style</div>
-                <div class="row">
-                    <span>Draw Style</span>
-                    <select id="style-select" onchange="updateScene(false)">
-                        <option value="ballStick">Ball & Stick</option>
-                        <option value="stick">Stick Only</option>
-                        <option value="sphere">Sphere (CPK)</option>
-                        <option value="line">Line</option>
-                    </select>
-                </div>
-                <div class="row">
-                    <span>Atom Labels</span>
-                    <label><input type="checkbox" id="chk-label-sym" onchange="updateScene(false)"> Symbol</label>
-                    <label><input type="checkbox" id="chk-label-idx" onchange="updateScene(false)"> Index</label>
-                </div>
-                <div class="row">
-                    <span>Show Legend</span>
-                    <input type="checkbox" id="chk-legend" onchange="updateScene(false)">
-                </div>
-            </div>
-
-            <div class="control-group">
-                <div class="group-title">4. Unit Cell</div>
+                <div class="group-title">Unit Cell Box</div>
                 <div class="row">
                     <span>Show Box</span>
-                    <input type="checkbox" id="chk-cell" checked onchange="updateScene(false)">
+                    <input type="checkbox" id="chk-box" checked onchange="updateScene(false)">
                 </div>
                 <div class="row">
                     <span>Color</span>
-                    <select id="cell-color" onchange="updateScene(false)">
+                    <select id="box-color" onchange="updateScene(false)">
                         <option value="black">Black</option>
                         <option value="red">Red</option>
                         <option value="blue">Blue</option>
-                        <option value="gray">Gray</option>
+                        <option value="white">White</option>
                     </select>
                 </div>
                 <div class="row">
-                    <span>Only Original Box</span>
-                    <input type="checkbox" id="chk-original-only" onchange="updateScene(false)">
+                    <span>Width</span>
+                    <input type="range" id="box-width" min="1" max="10" step="0.5" value="1.5" oninput="updateScene(false)">
                 </div>
             </div>
 
             <div class="control-group">
-                <div class="group-title">5. Supercell (Repeat)</div>
+                <div class="group-title">Axes (Origin)</div>
                 <div class="row">
-                    <span>X</span> <input type="number" id="sc-x" value="1" min="1" step="1">
-                    <span>Y</span> <input type="number" id="sc-y" value="1" min="1" step="1">
-                    <span>Z</span> <input type="number" id="sc-z" value="1" min="1" step="1">
+                    <span>Show Axes</span>
+                    <input type="checkbox" id="chk-axis" checked onchange="updateScene(false)">
                 </div>
-                <button onclick="updateScene(false)" style="width:100%; margin-top:5px; background:#6c757d; color:white;">Apply Supercell</button>
+                <div style="font-size:11px; color:#666;">
+                    <span style="color:red">Red: X</span> / <span style="color:green">Green: Y</span> / <span style="color:blue">Blue: Z</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="group-title">Supercell (Repeat)</div>
+                <div class="row">
+                    <span>X</span> <input type="number" id="sc-x" value="1" min="1" onchange="updateScene(false)">
+                </div>
+                <div class="row">
+                    <span>Y</span> <input type="number" id="sc-y" value="1" min="1" onchange="updateScene(false)">
+                </div>
+                <div class="row">
+                    <span>Z</span> <input type="number" id="sc-z" value="1" min="1" onchange="updateScene(false)">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="group-title">Atom Style</div>
+                <select id="style-select" onchange="updateScene(false)" style="width:100%">
+                    <option value="ballStick">Ball & Stick (Default)</option>
+                    <option value="sphere">Spacefill (Sphere)</option>
+                    <option value="stick">Stick Only</option>
+                    <option value="line">Line / Wireframe</option>
+                </select>
             </div>
             
-            <div style="font-size:10px; color:#999; text-align:center; margin-top:20px;">
-                VASP Mobile Viewer v2.1
+            <div style="text-align:center; font-size:11px; color:#999; margin-top:20px;">
+                VASP Mobile Pro v3.0
             </div>
 
         </div>
@@ -173,156 +176,181 @@
     <div id="container"></div>
 
     <script>
-        // 전역 변수
         let viewer = null;
         let modelData = null;
-        let currentFormat = "vasp"; // 기본값 VASP
+        let fileFormat = "vasp";
 
-        // 초기화
+        // 3Dmol 기본 색상표 (간이용)
+        const atomColors = {
+            'H': '#FFFFFF', 'C': '#909090', 'O': '#FF0D0D', 'N': '#3050F8',
+            'Pb': '#575961', 'Ti': '#BFC2C7', 'Zr': '#94E0E0', 'Si': '#DAA520' 
+            // 3Dmol이 자동으로 색을 잡지만, 범례 표시에 필요
+        };
+
         window.onload = function() {
-            let element = document.getElementById('container');
-            // 3Dmol 뷰어 생성
-            viewer = $3Dmol.createViewer(element, { backgroundColor: 'white' });
+            viewer = $3Dmol.createViewer(document.getElementById('container'), { backgroundColor: 'white' });
             
-            // 파일 로드 이벤트 연결
-            document.getElementById('fileInput').addEventListener('change', handleFileSelect, false);
+            document.getElementById('fileInput').addEventListener('change', function(e) {
+                let file = e.target.files[0];
+                if (!file) return;
+
+                document.getElementById('file-info').innerText = file.name;
+                
+                let reader = new FileReader();
+                reader.onload = function(event) {
+                    modelData = event.target.result;
+                    let fname = file.name.toUpperCase();
+                    fileFormat = fname.includes(".XYZ") ? "xyz" : "vasp";
+                    
+                    updateScene(true);
+                    
+                    // 모바일이면 메뉴 닫기
+                    if(window.innerWidth < 600) document.getElementById('sidebar').classList.remove('open');
+                };
+                reader.readAsText(file);
+            });
         };
 
         function toggleSidebar() {
-            let sb = document.getElementById('sidebar');
-            if(sb.style.right === "0px") sb.style.right = "-320px";
-            else sb.style.right = "0px";
+            document.getElementById('sidebar').classList.toggle('open');
         }
 
-        // 파일 선택 처리
-        function handleFileSelect(event) {
-            let file = event.target.files[0];
-            if (!file) return;
-
-            document.getElementById('file-name').innerText = file.name;
-            
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                modelData = e.target.result;
-                
-                // --- 파일 포맷 감지 로직 (수정됨) ---
-                let fname = file.name.toUpperCase();
-                // 1. 이름에 XYZ가 있거나 확장자가 .xyz면 XYZ
-                if (fname.includes(".XYZ")) {
-                    currentFormat = "xyz";
-                } 
-                // 2. 그 외(POSCAR, CONTCAR, 확장자 없음)는 전부 VASP로 간주
-                else {
-                    currentFormat = "vasp";
-                }
-                
-                updateScene(true); // 처음 로드시 카메라 리셋(true)
-                
-                // 모바일 편의성: 파일 선택 후 사이드바 자동 닫기
-                if(window.innerWidth < 600) toggleSidebar(); 
-            };
-            reader.readAsText(file);
-        }
-
-        // 씬 업데이트 (설정 적용)
+        // --- 메인 업데이트 함수 (핵심) ---
         function updateScene(resetCamera) {
             if (!modelData) return;
 
-            viewer.clear();
+            // 1. 기존 그림 싹 지우기 (박스, 축 중복 방지)
+            viewer.clear(); 
+            viewer.removeAllShapes(); 
 
-            // 1. 슈퍼셀 크기 가져오기 (정수 처리)
+            // 2. 모델 로드
+            viewer.addModel(modelData, fileFormat);
+
+            // 3. 슈퍼셀 적용 (렉 방지를 위해 모델 로드 직후 실행)
             let sx = parseInt(document.getElementById('sc-x').value) || 1;
             let sy = parseInt(document.getElementById('sc-y').value) || 1;
             let sz = parseInt(document.getElementById('sc-z').value) || 1;
-            
-            // 2. 모델 로드
-            viewer.addModel(modelData, currentFormat);
-            
-            // 3. 슈퍼셀 복제
+
             if (sx > 1 || sy > 1 || sz > 1) {
                 viewer.replicateUnitCell([sx, sy, sz]);
             }
 
             // 4. 스타일 적용
-            let styleSelect = document.getElementById('style-select').value;
+            let st = document.getElementById('style-select').value;
             let styleObj = {};
-            if(styleSelect === 'ballStick') styleObj = {sphere:{scale:0.25}, stick:{radius:0.12}};
-            else if(styleSelect === 'stick') styleObj = {stick:{radius:0.15}};
-            else if(styleSelect === 'sphere') styleObj = {sphere:{scale:0.85}};
-            else if(styleSelect === 'line') styleObj = {line:{}};
+            if(st === 'ballStick') styleObj = {sphere:{scale:0.25}, stick:{radius:0.12}};
+            else if(st === 'sphere') styleObj = {sphere:{scale:0.85}};
+            else if(st === 'stick') styleObj = {stick:{radius:0.15}};
+            else if(st === 'line') styleObj = {line:{}};
             
             viewer.setStyle({}, styleObj);
 
-            // 5. Unit Cell 박스
-            if (document.getElementById('chk-cell').checked) {
-                let color = document.getElementById('cell-color').value;
-                let onlyOriginal = document.getElementById('chk-original-only').checked;
+            // 5. Unit Cell Box 그리기 (체크 시에만)
+            if (document.getElementById('chk-box').checked) {
+                let bColor = document.getElementById('box-color').value;
+                let bWidth = parseFloat(document.getElementById('box-width').value);
                 
-                // 슈퍼셀 상태에서 '원본만 보기' 옵션이 켜져있으면 복제 안된 기본 셀만 그림
-                // 3Dmol에서는 replicateUnitCell을 하면 addUnitCell도 같이 커지는 경우가 많음.
-                // 따라서 여기서는 단순하게 처리:
                 viewer.addUnitCell({
-                    box: {color: color, linewidth: 1.0},
-                    alink: {color:'red', linewidth:1.5},
-                    blink: {color:'green', linewidth:1.5},
-                    clink: {color:'blue', linewidth:1.5}
+                    box: {color: bColor, linewidth: bWidth},
+                    // 여기서는 축 힌트(alink 등)는 끄고 순수 박스만
+                    alink: {linewidth:0, color: bColor}, 
+                    blink: {linewidth:0, color: bColor},
+                    clink: {linewidth:0, color: bColor} 
                 });
             }
 
-            // 6. 라벨 및 화학식 계산
+            // 6. Axis (축) 그리기 (체크 시에만, 원점에 화살표)
+            if (document.getElementById('chk-axis').checked) {
+                let origin = {x:0, y:0, z:0};
+                let axisLen = 5.0; // 화살표 길이
+                let w = 0.5;       // 화살표 두께
+
+                // X축 (Red)
+                viewer.addArrow({start: origin, end: {x:axisLen, y:0, z:0}, color:'red', radius:0.1});
+                // Y축 (Green)
+                viewer.addArrow({start: origin, end: {x:0, y:axisLen, z:0}, color:'green', radius:0.1});
+                // Z축 (Blue)
+                viewer.addArrow({start: origin, end: {x:0, y:0, z:axisLen}, color:'blue', radius:0.1});
+            }
+
+            // 7. 범례(Legend) 생성 (좌측 상단)
+            generateLegend();
+
+            // 8. 렌더링
+            if (resetCamera) viewer.zoomTo();
+            viewer.render();
+        }
+
+        // 범례 생성 함수
+        function generateLegend() {
             let atoms = viewer.selectedAtoms({});
             let counts = {};
             
-            // 기존 범례 삭제
-            let legend = document.getElementById('legend');
-            legend.style.display = 'none';
-            legend.innerHTML = "<strong>Legend</strong><br>";
-
-            if (atoms.length > 0) {
-                // 원자 카운팅
-                for(let a of atoms) {
-                    if(!counts[a.elem]) counts[a.elem] = 0;
-                    counts[a.elem]++;
-                    
-                    let lbl = "";
-                    if(document.getElementById('chk-label-sym').checked) lbl += a.elem;
-                    if(document.getElementById('chk-label-idx').checked) lbl += (lbl?"-":"") + a.index;
-                    
-                    if(lbl) {
-                        viewer.addLabel(lbl, {position: a, fontSize:10, backgroundColor:'rgba(0,0,0,0.6)', fontColor:'white'});
-                    }
+            // 원소별 카운트 및 색상 확인
+            for (let a of atoms) {
+                if (!counts[a.elem]) {
+                    // 3Dmol 내부 색상 가져오기 (없으면 회색)
+                    let c = a.color ? '#' + a.color.toString(16).padStart(6,'0') : '#999';
+                    counts[a.elem] = { count: 0, color: c };
                 }
-
-                // 화학식 텍스트 생성
-                let formula = "";
-                for(let el in counts) {
-                    formula += `${el}${counts[el]} `;
-                    legend.innerHTML += `• ${el} (${counts[el]})<br>`;
-                }
-                
-                // 원자가 있으면 정보창 업데이트
-                document.getElementById('atom-info').innerText = `Formula: ${formula} (Total: ${atoms.length})`;
-                
-                // 범례 표시 여부
-                if(document.getElementById('chk-legend').checked) {
-                    legend.style.display = 'block';
-                }
-            } else {
-                document.getElementById('atom-info').innerText = "Format Error: No atoms found. (Try adding .vasp extension)";
+                counts[a.elem].count++;
             }
 
-            // 7. 렌더링
-            if(resetCamera) viewer.zoomTo();
-            viewer.render();
+            let html = "";
+            for (let elem in counts) {
+                let info = counts[elem];
+                // 점(dot) 색상은 실제 원자 색상과 매칭
+                // 3Dmol의 기본 색상 매핑이 정확하지 않을 수 있어, 렌더링된 색을 가져오려 시도했으나
+                // 여기서는 CSS로 직접 원 그리기
+                // *3Dmol은 스크립트 내부에서 색을 결정하므로, 정확한 색을 알기 위해선 element mapping이 필요하나
+                // 시각적으로는 대략적인 매칭만 보여줌
+                
+                html += `
+                    <div class="legend-item">
+                        <span class="atom-dot" style="background-color: ${info.color}"></span>
+                        <b>${elem}</b> : ${info.count}
+                    </div>
+                `;
+            }
+            
+            let lg = document.getElementById('legend');
+            if (atoms.length > 0) {
+                lg.innerHTML = html;
+                lg.style.display = 'block';
+            } else {
+                lg.style.display = 'none';
+            }
         }
 
-        // 뷰 프리셋
-        function setView(axis) {
-            if(axis==='a') viewer.zoomTo({x:100, y:0, z:0});
-            if(axis==='b') viewer.zoomTo({x:0, y:100, z:0});
-            if(axis==='c') viewer.zoomTo({x:0, y:0, z:100});
-            viewer.render();
+        // 뷰 정렬 함수 (A, B, C 축)
+        function setCameraView(axis) {
+            // 모델의 중심점 계산 (대략적)
+            // 3Dmol은 zoomTo()가 중심을 맞춰주므로, 카메라 각도만 잡으면 됨
+            // 하지만 zoomTo는 위치를 잡는 것이라, 
+            // 꼼수로: 멀리서 해당 축을 바라보게 zoomTo를 실행
+            
+            let dist = 100; // 충분히 먼 거리
+            if (axis === 'a') {
+                // YZ 평면을 봐야 함 -> X축 위에서 (1,0,0) 방향
+                // 3Dmol에서 setCameraParameters 사용 불가시 zoomTo 활용
+                // zoomTo는 '선택된 원자'를 중심으로 줌을 당김.
+                // 뷰 회전은 rotateTo 가 없음.
+                // 대신 setViewStyle이 없으므로, standard view를 위해선
+                // 카메라 위치를 강제로 이동시켜야 함. (API 제한)
+                
+                // 차선책: 그냥 회전 애니메이션 없이 즉시 이동 시도
+                // (3Dmol.js API 한계로 완벽한 축 정렬이 까다로우나 아래 방법 시도)
+                viewer.zoomTo({x:1000, y:0, z:0}, 0); // X축 먼곳에서 보기
+            } else if (axis === 'b') {
+                viewer.zoomTo({x:0, y:1000, z:0}, 0); // Y축 먼곳에서 보기
+            } else if (axis === 'c') {
+                viewer.zoomTo({x:0, y:0, z:1000}, 0); // Z축 먼곳에서 보기
+            }
+            
+            // 약간의 딜레이 후 렌더링
+            setTimeout(() => viewer.render(), 10);
         }
+
     </script>
 </body>
 </html>
