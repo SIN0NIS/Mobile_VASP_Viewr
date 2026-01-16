@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile ASE-like Viewer</title>
+    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; overflow: hidden; }
+        
+        /* 컨트롤 패널: 모바일 상단에 위치 */
+        #controls {
+            position: absolute; top: 0; left: 0; width: 100%;
+            background: rgba(240, 240, 240, 0.95); 
+            padding: 10px; box-sizing: border-box;
+            border-bottom: 1px solid #ccc;
+            z-index: 10; display: flex; align-items: center; gap: 10px;
+        }
+        
+        #container { width: 100vw; height: 100vh; position: relative; }
+        
+        /* 파일 인풋 버튼 꾸미기 */
+        .custom-file-input {
+            padding: 8px 12px; background: #007bff; color: white;
+            border-radius: 5px; border: none; font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <input type="file" id="fileInput">
+        <span style="font-size: 12px; color: #333;">(POSCAR loaded)</span>
+    </div>
+
+    <div id="container"></div>
+
+    <script>
+        // 1. 뷰어 초기화 (ASE처럼 흰 배경)
+        let element = document.getElementById('container');
+        let config = { backgroundColor: 'white' }; 
+        let viewer = $3Dmol.createViewer(element, config);
+
+        // 2. 파일 로드 이벤트
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let content = e.target.result;
+                
+                viewer.clear(); // 기존 모델 삭제
+
+                // 모델 추가 (VASP 포맷)
+                viewer.addModel(content, "vasp");
+
+                // [핵심 1] Unit Cell 박스 그리기 (ASE의 Show Unit Cell 기능)
+                viewer.addUnitCell({
+                    box: {color: 'black'},   // 박스 색상 검정
+                    alink: {color: 'red'},   // a축 라벨 색 (선택사항)
+                    blink: {color: 'green'}, // b축 라벨 색
+                    clink: {color: 'blue'}   // c축 라벨 색
+                });
+
+                // [핵심 2] 스타일 지정 (ASE 스타일: 구슬 + 막대)
+                viewer.setStyle({}, {
+                    sphere: {scale: 0.25}, // 원자 크기 적절히 조절
+                    stick: {radius: 0.1}   // 결합 막대 두께
+                });
+
+                // 화면 중앙 정렬
+                viewer.zoomTo();
+                
+                // 렌더링
+                viewer.render();
+            };
+            reader.readAsText(file);
+        });
+    </script>
+</body>
+</html>
